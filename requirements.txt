@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+pillow
+# Only needed for training and for running the trained model:
+torch
+torchvision

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2937">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>WeldTrace</title>
+<style>
+  :root{--bg:#f4f5f7;--card:#fff;--ink:#111827;--mute:#6b7280;--line:#e5e7eb;--brand:#c2410c;--ok:#15803d;--bad:#b91c1c;--warn:#b45309}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1a1d24;--ink:#f3f4f6;--mute:#9ca3af;--line:#2b303a;--brand:#fb923c;--ok:#4ade80;--bad:#f87171;--warn:#fbbf24}}
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:76px}
+  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+  header h1{font-size:18px;margin:0}
+  #net{font-size:12px;padding:3px 8px;border-radius:99px;background:var(--line);color:var(--mute)}
+  #net.off{background:var(--warn);color:#fff}
+  main{padding:16px;max-width:640px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  h2{font-size:16px;margin:0 0 10px}
+  label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+  input,select,textarea,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+  button{background:var(--brand);color:#fff;border:0;font-weight:600;margin-top:12px;cursor:pointer}
+  button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.5}
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  nav button{margin:0;border-radius:0;background:transparent;color:var(--mute);border:0;padding:14px 4px}
+  nav button.on{color:var(--brand)}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid currentColor}
+  .pass,.released{color:var(--ok)}.reject,.hold{color:var(--bad)}.review,.awaiting_signoff,.retake,.in_progress,.uninspected,.no_welds{color:var(--warn)}
+  .row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border:0}
+  .mute{color:var(--mute);font-size:13px}
+  img.prev{width:100%;border-radius:10px;margin-top:10px}
+  .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:2px 0 8px}.bar i{display:block;height:100%;background:var(--brand)}
+  .hide{display:none}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+</head>
+<body>
+<header><h1>WeldTrace</h1><span id="net">online</span></header>
+<main>
+  <section id="tab-inspect">
+    <div class="card">
+      <h2>1. Weld</h2>
+      <label for="job">Job</label><select id="job"></select>
+      <label for="weld">Joint</label><select id="weld"></select>
+      <details style="margin-top:10px"><summary class="mute">Register a new joint</summary>
+        <label for="newJoint">Joint label (e.g. T1-seam-A)</label><input id="newJoint">
+        <label for="newWelder">Welder who made it</label><select id="newWelder"></select>
+        <label for="newMaterial">Material being welded</label>
+        <select id="newMaterial"></select>
+        <input id="newMaterialOther" class="hide" placeholder="Describe the material" style="margin-top:8px">
+        <label for="newProcess">Welding process</label>
+        <select id="newProcess"></select>
+        <label for="newElectrode">Electrode / filler</label>
+        <select id="newElectrode"></select>
+        <input id="newElectrodeOther" class="hide" placeholder="Describe the electrode" style="margin-top:8px">
+        <div id="compat" class="mute" style="color:var(--warn);margin-top:10px"></div>
+        <button id="addWeld" class="sec">Add joint</button>
+      </details>
+    </div>
+    <div class="card">
+      <h2>2. Photo</h2>
+      <p class="mute">Fill the frame with the weld bead, good light, no glare, hold steady. Add a ruler or coin for scale when possible.</p>
+      <input id="photo" type="file" accept="image/*" capture="environment">
+      <img id="prev" class="prev hide" alt="Weld preview">
+      <button id="send" disabled>Analyse &amp; save</button>
+      <p id="sendMsg" class="mute"></p>
+    </div>
+    <div id="resultCard" class="card hide">
+      <h2>3. Result</h2>
+      <div id="result"></div>
+      <div id="signoff" class="hide">
+        <label for="finalLabel">Inspector's finding</label><select id="finalLabel"></select>
+        <label for="notes">Notes</label><textarea id="notes" rows="2"></textarea>
+        <div class="grid2">
+          <button id="doPass">Sign off: PASS</button>
+          <button id="doReject" style="background:var(--bad)">Sign off: REJECT</button>
+        </div>
+      </div>
+    </div>
+    <div id="queueCard" class="card hide"><h2>Waiting to upload</h2><div id="queue" class="mute"></div></div>
+  </section>
+
+  <section id="tab-jobs" class="hide">
+    <div class="card">
+      <h2>New job</h2>
+      <label for="jRef">Job reference</label><input id="jRef">
+      <label for="jType">Item</label>
+      <select id="jType"></select>
+      <label for="jCust">Customer</label><input id="jCust">
+      <button id="addJob">Create job</button>
+    </div>
+    <div class="card"><h2>Jobs</h2><div id="jobList"></div></div>
+    <div id="recCard" class="card hide"><h2 id="recTitle">Quality record</h2><div id="rec"></div></div>
+    <button class="sec" id="csv">Download all records (CSV)</button>
+  </section>
+
+  <section id="tab-welders" class="hide">
+    <div class="card">
+      <h2>Add welder</h2>
+      <label for="wName">Name</label><input id="wName">
+      <label for="wBadge">Badge / ID</label><input id="wBadge">
+      <label for="wQual">Qualification</label><input id="wQual" placeholder="e.g. ISO 9606-1 135 P FW">
+      <button id="addWelder">Save welder</button>
+    </div>
+    <div class="card"><h2>Welders</h2><div id="welderList"></div></div>
+  </section>
+
+  <section id="tab-settings" class="hide">
+    <div class="card">
+      <h2>Settings</h2>
+      <label for="insp">Your name (recorded on every sign-off)</label><input id="insp">
+      <label for="key">API key (if your server requires one)</label><input id="key" type="password">
+      <button id="saveSet">Save</button>
+      <p class="mute" id="modelInfo"></p>
+    </div>
+  </section>
+</main>
+<nav>
+  <button data-tab="inspect" class="on">Inspect</button>
+  <button data-tab="jobs">Records</button>
+  <button data-tab="welders">Welders</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>

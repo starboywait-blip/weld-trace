@@ -1,0 +1,26 @@
+{
+  "labels": [
+    "burn_through",
+    "crack",
+    "good",
+    "lack_of_fusion",
+    "overlap",
+    "porosity",
+    "spatter",
+    "undercut"
+  ],
+  "version": "mnv3s-2026-11-01",
+  "val_accuracy": 0.4595,
+  "val_recall": {
+    "burn_through": 0.0,
+    "crack": 0.375,
+    "good": 0.4286,
+    "lack_of_fusion": 0.0,
+    "overlap": 0.0,
+    "porosity": 0.5625,
+    "spatter": 1.0,
+    "undercut": 0.5
+  },
+  "n_train": 159,
+  "n_val": 37
+}
